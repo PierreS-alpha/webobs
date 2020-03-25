@@ -1,8 +1,8 @@
-#!/usr/bin/perl 
+#!/usr/bin/perl
 
 =head1 NAME
 
-sefran3.pl 
+sefran3.pl
 
 =head1 SYNOPSIS
 
@@ -10,7 +10,7 @@ http://..../editMC3.pl? ... see query string parameters below ...
 
 =head1 DESCRIPTION
 
-Process "Main Courante" editor form 
+Process "Main Courante" editor form
 
 =head1 Query string parameters
 
@@ -18,7 +18,7 @@ Process "Main Courante" editor form
 
  mc3=
 
- id_evt_modif= 
+ id_evt_modif=
 
  delete= { 0 | 1 | 2 }
  - void or 0 = modify data
@@ -27,37 +27,39 @@ Process "Main Courante" editor form
 
  operator=
 
- date= 
+ date=
 
  secEvnt=
 
- typeEvnt= 
+ typeEvnt=
 
- arrivee= 
+ arrivee=
 
- dureeEvnt= 
+ dureeEvnt=
 
- uniteEvnt= 
+ uniteEvnt=
 
- dureeSatEvnt= 
+ dureeSatEvnt=
 
- amplitudeEvnt= 
+ amplitudeEvnt=
 
- stationEvnt= 
+ stationEvnt=
 
- comment= 
+ comment=
 
- impression= 
+ impression=
 
- replay= 
+ replay=
 
- nbrEvnt=  
+ nbrEvnt=
 
- smoinsp=  
+ smoinsp=
 
- imageSEFRAN= 
+ imageSEFRAN=
 
  newSC3=
+
+ externalScript=
 
  idSC3= MC2 compatibility
 
@@ -71,6 +73,7 @@ use strict;
 use warnings;
 use Time::Local;
 use POSIX qw(strftime);
+use List::Util qw(first);
 use CGI;
 my $cgi = new CGI;
 use CGI::Carp qw(fatalsToBrowser set_message);
@@ -122,6 +125,7 @@ my $nbrEvnt  =  $cgi->param('nombreEvenement');
 my $smoinsp  =  $cgi->param('smoinsp');
 my $imageSEFRAN =  $cgi->param('imageSEFRAN');
 my $newSC3   = $cgi->param('newSC3event') // 0;
+my $externalScript = $cgi->param('externalScript') // 0;
 
 # compatibility with MC2
 my $idSC3     = $cgi->param('files');
@@ -136,8 +140,23 @@ my %SEFRAN3 = readCfg("$WEBOBS{ROOT_CONF}/$s3.conf");
 $mc3 ||= $WEBOBS{MC3_DEFAULT_NAME};
 my %MC3 = readCfg("$WEBOBS{ROOT_CONF}/$mc3.conf");
 
+# ---- loads additional configurations:
+# channels
+my @channels = readCfgFile("$SEFRAN3{CHANNEL_CONF}");
+my @alias;
+my @streams;
+for (@channels) {
+	my ($ali,$cod) = split(/\s+/,$_);
+	push(@alias,$ali);
+	push(@streams,$cod);
+}
+
+# spectrogram inits
+my %types = readCfg("$MC3{EVENT_CODES_CONF}",'sorted');
+my $extScriptOptions = $types{$typeEvnt}{ExtScriptOptions};
+
 # ------------------------------------------------------------------
-# !!!!!!!!!!!!!!  MC3 non-blocking LOCK !!!!!!!!!!!!!!!!!!!!!!!!!!!!  
+# !!!!!!!!!!!!!!  MC3 non-blocking LOCK !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # ------------------------------------------------------------------
 my $lockFile = "/tmp/.$mc3.lock";
 if (-e $lockFile) {
@@ -163,6 +182,10 @@ if ($nb_images > $MC3{IMAGES_MAX_CAT}) {
 	$nb_images = $MC3{IMAGES_MAX_CAT};
 }
 
+# miniseed file of SefraN channels
+my $mseedreq = "/cgi-bin/$WEBOBS{MSEEDREQ_CGI}?s3=$s3&streams=".join(',',@streams);
+my $mseed = "$mseedreq&t1=$anneeEvnt,$moisEvnt,$jourEvnt,$heureEvnt,$minEvnt,$secEvnt&ds=".int($dureeEvnt*$val);
+
 # full path filename MC
 #
 my $mc_filename = "$MC3{ROOT}/$anneeEvnt/$MC3{PATH_FILES}/$MC3{FILE_PREFIX}$anneeEvnt$moisEvnt.txt";
@@ -182,7 +205,7 @@ if (-s $mc_filename)  {
 	# Read current file
 	print "<P><B>Existing file:</B> $mc_filename ...";
 	open(my $mcfile, "<$mc_filename") || Quit($lockFile,"$__{'Could not open'} $mc_filename\n");
-	while(<$mcfile>) { 
+	while(<$mcfile>) {
 		chomp;
 		push(@lignes, $_) if $_;
 	}
@@ -224,6 +247,21 @@ if ($id_evt_modif) {
 	} else {
 		$id_evt = $id_evt_modif;
 		print "<P><B>Modifying existing event:</B> $id_evt</P>";
+    # read existing line
+  	my @line_values = split(/\|/,$line);
+    @image_list = split(/,/,@line_values[14]);
+    # check if previous image was at the same minute
+    my $idx = first { substr($imageSEFRAN,0,-6) eq substr($image_list[$_],0,-6) } 0..$#image_list;
+    if(defined $idx) {
+      # if found, update image name
+      splice(@image_list,$idx,1,$imageSEFRAN);
+    }
+    else {
+      # otherwise, add to the list
+      my @new_image_list = $imageSEFRAN;
+      push(@new_image_list, @image_list);
+      @image_list = @new_image_list;
+    }
 	}
 # case B) new event: reads all and compute next ID
 #
@@ -245,7 +283,7 @@ if ($delete < 2) {
 	my $timestamp = strftime "%Y%m%dT%H%M%S", gmtime;
 	my $chaine = "$id_evt|$anneeEvnt-$moisEvnt-$jourEvnt|$heureEvnt:$minEvnt:$secEvnt"
 		."|$typeEvnt|$amplitudeEvnt|$dureeEvnt|$uniteEvnt|$dureeSatEvnt|$nbrEvnt|$smoinsp|$stationEvnt|$arrivee"
-		."|$fileNameSUDS|$idSC3|$imageSEFRAN|$operator/$timestamp|$comment";
+		."|$fileNameSUDS|$idSC3|".join(',', @image_list)."|$operator/$timestamp|$comment";
 	push(@lignes, u2l($chaine));
 }
 
@@ -265,7 +303,7 @@ close($mcfile);
 my $retCHMOD = qx (/bin/chmod 664 $mc_filename);
 
 # ------------------------------------------------------------------
-# !!!!!!!!!!!!!!  MC3 unlock            !!!!!!!!!!!!!!!!!!!!!!!!!!!!  
+# !!!!!!!!!!!!!!  MC3 unlock            !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # ------------------------------------------------------------------
 if (-e $lockFile) {
 	unlink $lockFile;
@@ -317,7 +355,10 @@ my $textePourImage = "$anneeEvnt-$moisEvnt-$jourEvnt $heureEvnt:$minEvnt:$secEvn
 
 if ($delete == 2) {
 	print "<p><b>Erase image/b>... ";
-	qx(rm -f $imageMC);
+  for (@image_list) {
+    my $imgMC = "$MC3{ROOT}/$anneeEvnt/$MC3{PATH_IMAGES}/$anneeEvnt$moisEvnt/$_";
+    qx(rm -f $imgMC);
+  }
 	print "Done.</p>";
 } else {
 	print '<p><b>Looking for images to be concatenated</b>...<UL> ';
@@ -410,7 +451,7 @@ if ($newSC3 > 0) {
 
 	my ($socket,$client_socket);
 
-	# creating object interface of IO::Socket::INET modules which internally creates 
+	# creating object interface of IO::Socket::INET modules which internally creates
 	# socket, binds and connects to the TCP server running on the specific port.
 	$socket = new IO::Socket::INET (
 		PeerHost => $MC3{WO2SC3_HOSTNAME},
@@ -438,7 +479,7 @@ if ($newSC3 > 0) {
 }
 
 # ---------------------------------------------------------------------
-sub Quit 
+sub Quit
 {
 	if (-e $_[0]) {
 		unlink $_[0];
@@ -455,7 +496,7 @@ __END__
 Francois Beauducel, Didier Lafon
 
 Acknowledgments:
- 
+
 traitementMC2.pl [2004-2009] by Didier Mallarinio, Francois Beauducel and Alexis Bosson
 
 afficheSEFRAN.pl [2009] by Alexis Bosson and Francois Beauducel
@@ -480,4 +521,3 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 =cut
-
