@@ -922,6 +922,14 @@ if ($date) {
 			print " <INPUT type=\"button\" id=\"eqdiscrim\" value=\"EQDISCRIM\" onClick=\"run_eqdiscrim()\"><BR>";
 		}
 
+		# eqdiscrim
+		if ($MC3{EXTERNAL_SCRIPT_PATH} ne "" && $types{$type_evt}{ExternalScript} != -1) {
+				print "<P><INPUT type=\"checkbox\" name=\"externalScript\" value=\"1\""
+					." id=\"externalScript\"".($types{$type_evt}{ExternalScript} && $id ne "" ? " checked":"").">"
+					."<LABEL FOR=\"externalScript\">$__{'".$MC3{EXTERNAL_SCRIPT_DESCRIPTION}."'}</LABEL></P>\n";
+			}
+		}
+
 		# lien USGS
 		my $ocl = "<A href=\"$MC3{USGS_URL}\" target=\"_blank\"><B>USGS</B></A>";
 		$ocl = $MC3{VISIT_LINK} if (defined($MC3{VISIT_LINK}));
@@ -937,11 +945,6 @@ if ($date) {
 				print "<P><INPUT type=\"checkbox\" name=\"newSC3event\" value=\"1\""
 					." id=\"newSC3event\"".($types{$type_evt}{WO2SC3} && $id ne "" ? " checked":"").">"
 					."<LABEL FOR=\"newSC3event\">$__{'Create a new SeisComp ID'}</LABEL></P>\n";
-					print "<TABLE style=\"border:0\" width=\"100%\"><TR><TD style=\"border:0\">";
-					if ($types{$type_evt}{ExternalScript} != -1) {
-						print "<P><INPUT type=\"checkbox\" name=\"externalScript\" value=\"1\""
-							." id=\"externalScript\"".($types{$type_evt}{ExternalScript} && $id ne "" ? " checked":"").">"
-							."<LABEL FOR=\"externalScript\">$__{'Run external script'}</LABEL></P>\n";
 			}
 			# impression et replay
 			if ($id) {
