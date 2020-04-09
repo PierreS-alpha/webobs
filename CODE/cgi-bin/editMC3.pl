@@ -96,6 +96,7 @@ set_message(\&webobs_cgi_msg);
 $|=1;
 $ENV{LANG} = $WEBOBS{LOCALE};
 my $editOK = 0;
+my @image_list;
 
 # ---- get query-string  parameters
 my $s3       = $cgi->url_param('s3');
@@ -238,6 +239,8 @@ my $id_evt;
 # case A) existing event (modification or delete): reads all but concerned ID
 #
 if ($id_evt_modif) {
+  # Get the event from @lignes
+	my @ligne = grep { /^$id_evt_modif\|/ } @lignes;
 	# Remove the event from @lignes
 	@lignes = grep { $_ !~ /^$id_evt_modif\|/ } @lignes;
 	if ($delete > 0) {
@@ -248,7 +251,7 @@ if ($id_evt_modif) {
 		$id_evt = $id_evt_modif;
 		print "<P><B>Modifying existing event:</B> $id_evt</P>";
     # read existing line
-  	my @line_values = split(/\|/,$line);
+  	my @line_values = split(/\|/,$ligne[0]);
     @image_list = split(/,/,@line_values[14]);
     # check if previous image was at the same minute
     my $idx = first { substr($imageSEFRAN,0,-6) eq substr($image_list[$_],0,-6) } 0..$#image_list;
@@ -275,6 +278,20 @@ if ($id_evt_modif) {
 	}
 	$id_evt = $max + 1;
 	print "<P><B>New event:</B> $id_evt</P>";
+}
+
+# if externalScript activated, add images to the list
+#
+if ($externalScript > 0) {
+  if ($MC3{EXTERNAL_SCRIPT_IMAGE} eq "ope") {
+    my @externalScript_IMG = sprintf("%4d%02d%02d_%02d%02d%02.0f_ext.png",$anneeEvnt,$moisEvnt,$jourEvnt,$heureEvnt,$minEvnt,$secEvnt);
+  } elsif ($MC3{EXTERNAL_SCRIPT_IMAGE} eq "opc") {
+    my @externalScript_IMG = "";
+    for (@streams) {
+      push(@externalScript_IMG,sprintf("%4d%02d%02d_%02d%02d%02.0f_%s.png",$anneeEvnt,$moisEvnt,$jourEvnt,$heureEvnt,$minEvnt,$secEvnt,$_));
+    }
+  }
+  push(@image_list,@externalScript_IMG)
 }
 
 # In case of add/modify/trash: new data line is written, in other case definitive delete
@@ -476,6 +493,16 @@ if ($newSC3 > 0) {
 		$socket->close();
 	}
 
+}
+
+# --- Launch external external script
+
+if ($externalScript > 0) {
+  # TODO arguments :
+  #       chemin complet vers fichier miniSEED
+  #       nom images
+  #       type image (une par canal ou une seule)
+    system(("$MC3{EXTERNAL_SCRIPT_PATH}", "$mseedfile", ));
 }
 
 # ---------------------------------------------------------------------
