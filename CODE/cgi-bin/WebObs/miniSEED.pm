@@ -65,6 +65,7 @@ sub getwinstondata
 
 }
 
+
 # -------------------------------------------------------------------------------------------------
 
 =pod
@@ -78,6 +79,24 @@ select miniSEED data source to call depending on SEFRAN3 configuration and data 
 =cut
 
 sub selectdatasource
+{
+
+}
+
+
+# -------------------------------------------------------------------------------------------------
+
+=pod
+
+=head2 getSEFRANminiSEED
+
+get miniSEED data from a given SEFRAN3 datasource and timerange
+
+	$mseedfile = getSEFRANminiSEED();
+
+=cut
+
+sub getSEFRANminiSEED
 {
 
 }
