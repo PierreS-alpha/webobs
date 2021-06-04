@@ -954,15 +954,15 @@ if ($date) {
 		for (sort(keys(%typesSO))) {
 			my $key = $typesSO{$_};
 			if ($key ne "AUTO" || $id) {
-				print "<OPTION value=\"$key\"".($type_evt eq $key ? " selected":"").">$types{$key}{Name}</OPTION>\n";
+				print "<OPTION id=\"$key\" value=\"$key\"".($type_evt eq $key ? " selected":"").">$types{$key}{Name} </OPTION>\n";
 			}
 		}
 		print "</SELECT>\n";
 
-		# eqdiscrim
-		if ($MC3{EQDISCRIM_SERVER} ne "") {
-			print "<INPUT type=\"hidden\" name=\"eqdsrv\" value=\"$MC3{EQDISCRIM_SERVER}\">";
-			print " <INPUT type=\"button\" id=\"eqdiscrim\" value=\"EQDISCRIM\" onClick=\"run_eqdiscrim()\"><BR>";
+                # Prediction seismic-event
+		if ($SEFRAN3{PREDICT_SEISMIC_EVENT} ne "") {
+			print "<INPUT type=\"hidden\" name=\"eqdsrv\" value=\"$SEFRAN3{PREDICT_SEISMIC_EVENT}\">";
+			print " <INPUT type=\"button\" id=\"eqdiscrim\" value=\"Compute\" onClick=\"predict_seismic_event('$SEFRAN3{PREDICT_ALGO}','$SEFRAN3{PREDICT_CONF_FILE} ','$SEFRAN3{DATASOURCE}')\"><BR>";
 		}
 
 		# link to USGS

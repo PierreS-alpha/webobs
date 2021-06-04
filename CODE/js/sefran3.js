@@ -464,12 +464,61 @@ function supprime(level) {
 	MECB.FORM.submit();
 }
 
-// ---- EQDISCRIM: run request
-function run_eqdiscrim() {
-	var EQD = MECB.FORM.eqdsrv.value;
-//	$.getJSON(EQD,
-//		'run_predict, 20160831T172927.32, 10'
-//	)
-//	.done(function(data) {
-//		,alert('test !'));
+// ---- check for required inputs in mcform to predict
+function verif_to_predict() {
+	if (MECB.FORM.stationEvenement.value == "") {
+        alert(MECB.MSGS['staevt']);
+        MECB.FORM.stationEvenement.focus();
+        return false;
+    }
+	if (MECB.FORM.secondeEvenement.value == "" || MECB.FORM.secondeEvenement.value < 0 || MECB.FORM.secondeEvenement.value >= 60) {
+        alert(MECB.MSGS['secevt']);
+        MECB.FORM.secondeEvenement.focus();
+        return false;
+    }
+	if(MECB.FORM.dureeEvenement.value == "" || isNaN(MECB.FORM.dureeEvenement.value)) {
+        alert(MECB.MSGS['durevt']);
+        MECB.FORM.dureeEvenement.focus();
+        return false;
+    }
+    return true;
+
+}
+
+
+// ---- Compute probabilities of seismic events
+function predict_seismic_event(predict_algo, setting_file_path, datasource){
+	var verbatim = 0;
+        let URL="/cgi-bin/predict.pl";
+        // check the input arguments
+        if(verif_to_predict()){
+            console.log("COMPUTE SEISMIC-EVENTS CLASSIFICATION PROBABILITIES");
+            $.ajax({
+                url:URL,
+                type:'GET',
+                dataType: "json",
+                data:{predict_algo:predict_algo,
+                    setting_file_path:setting_file_path,
+                    datasource:datasource,
+                    year:parseInt(MECB.FORM.year.value),
+                    month:parseInt(MECB.FORM.month.value),
+                    day:parseInt(MECB.FORM.day.value),
+                    hour:parseInt(MECB.FORM.hour.value),
+                    minut:parseInt(MECB.FORM.minute.value),
+                    second:parseFloat(MECB.FORM.secondeEvenement.value),
+                    duration:parseFloat(MECB.FORM.dureeEvenement.value),
+                    verbatim:verbatim},
+                error: function(error){console.log("ERROR",error)}
+	    }).done(function(JSONdata){
+                console.log("OUTPUTS: ",JSONdata);
+                (Object.keys(JSONdata).forEach(function(key){
+                    var event_html = document.getElementById(key);
+                    if (event_html !== null){
+                        //Display probability correctly (update probability if already display)
+                        if (/^[a-zA-Z\s/-]+$/.test(event_html.innerHTML)){event_html.innerHTML+=JSONdata[key];}
+                        else {event_html.innerHTML.replace(/\d+/,JSONdata[key]);}}
+                    else {console.log("Need to add class:", key)}
+                }));
+            });
+        }else{alert("MISSING INPUTS TO PREDICT");}
 }
