@@ -576,6 +576,49 @@ if ($editOK || $#infosInstallNode >=0) {
 }
 
 
+# Row "installation" PS TEST
+#
+my $RinfoInstallFile = "installation.txt";
+my $infoInstallFile = "$NODES{PATH_NODES}/$NODEName/$RinfoInstallFile";
+my @infosInstallNode = ("");
+if ((-e $infoInstallFile) && (-s $infoInstallFile != 0)) {
+	@infosInstallNode = grep(!/^$/,readFile($infoInstallFile));
+}
+if ($editOK || $#infosInstallNode >=0) {
+	print "<TR><TH valign=\"top\">";
+	my $txt = $__{'Installation'};
+	#print ($editOK ? "<a href=\"$cgiEtxt?file=$RinfoInstallFile&node=$GRIDType.$GRIDName.$NODEName\">$txt</a>":$txt);
+	print ($editOK ? "<a href=\"$cgiEtxt?file=$RinfoInstallFile&node=$GRIDType.$GRIDName.$NODEName\"> tototot </a>":$txt);
+	print "</TH><TD colspan=\"2\">".wiki2html(join("",@infosInstallNode))."</TD></TR>\n";
+}
+
+
+
+# Row "M3G"
+#
+my $fid_char9 = $NODE{"$GRIDType.$GRIDName.FID_IGS_CHAR9"} // $NODE{FID};
+#my $RinfoInstallFile = "installation.txt";
+#my $infoInstallFile = "$NODES{PATH_NODES}/$NODEName/$RinfoInstallFile";
+#my @infosInstallNode = ("");
+#if ((-e $infoInstallFile) && (-s $infoInstallFile != 0)) {
+#	@infosInstallNode = grep(!/^$/,readFile($infoInstallFile));
+#}
+
+if ($editOK || $#infosInstallNode >=0) {
+	print "<TR><TH valign=\"top\">";
+	#my $txt = $__{'Installation'};
+	my $m3g_url_edit = "aaaaaa";
+	my $m3g_url_sitelog = "https://gnss-metadata.eu/sitelog/exportlog?station=".$fid_char9;
+	my $m3g_url_gml = "https://gnss-metadata.eu/sitelog/exportxml?station=".$fid_char9;
+	
+	my $m3g_edit = "<a href=".$m3g_url_edit.">Edit the sitelog</a>";
+	my $m3g_sitelog = "<a href=".$m3g_url_sitelog.">Download the sitelog</a>";
+	my $m3g_gml = "<a href=".$m3g_url_gml.">Download the GeodesyML</a>";
+	
+	print ($editOK ? "<a href=\"$cgiEtxt?file=$RinfoInstallFile&node=$GRIDType.$GRIDName.$NODEName\">Metadata M3G</a>":$txt);
+	print "</TH><TD colspan=\"2\">".join("<br>",$fid_char9,$m3g_edit,$m3g_sitelog,$m3g_gml)."</TD></TR>\n";
+}
+
 # Row "infos"
 #
 my $RinfoFile = "info.txt";
